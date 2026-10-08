@@ -36,10 +36,11 @@ start='# >>> agents-setup >>>'
 end='# <<< agents-setup <<<'
 for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
   [ -f "$rc" ] || continue
-  # drop an earlier block (the repo may have moved), then append the current one
-  awk -v s="$start" -v e="$end" '$0==s{skip=1} !skip{print} $0==e{skip=0}' "$rc" > "$rc.tmp"
+  # drop an earlier block (the repo may have moved), then put the current one at the TOP: a
+  # stock ~/.bashrc returns early for non-interactive shells, and agents' tool shells are those
+  { printf '%s\nexport AGENTS_SETUP="%s"\n%s\n' "$start" "$AGENTS_SETUP" "$end"
+    awk -v s="$start" -v e="$end" '$0==s{skip=1} !skip{print} $0==e{skip=0}' "$rc"; } > "$rc.tmp"
   cat "$rc.tmp" > "$rc" && rm "$rc.tmp"
-  printf '%s\nexport AGENTS_SETUP="%s"\n%s\n' "$start" "$AGENTS_SETUP" "$end" >> "$rc"
   echo "AGENTS_SETUP set in $rc"
 done
 
