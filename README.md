@@ -16,6 +16,10 @@ global/                       linked into ~/.claude by setup.sh
 ├── CLAUDE.md                 behavioural guidelines for every project
 └── skills/<group>/<skill>/   skills, grouped by what they do
     └── delegation/handoff2auto/   hand long-running work to a detached agent
+workspaces/<dir>/             linked into ~/projects/<dir>/ by setup.sh, file by file
+├── my-workspace/                  supervisor CLAUDE.md + platform principles for every repo under it
+│   └── website/              CLAUDE.md pointing at the site's README house rules
+└── my-site/                CLAUDE.md for the personal site
 templates/project/            a project's .claude/ skeleton (copied, not linked)
 ├── CLAUDE.md                 project header to fill in
 ├── settings.json             plan mode by default; no edits to secrets; ask before commit/push
@@ -29,6 +33,26 @@ templates/project/            a project's .claude/ skeleton (copied, not linked)
 Global files are **symlinked**, so editing them here changes every session on this machine; commit
 and push to carry the change to other machines. Project files are **copied**, because each project
 fills them in.
+
+## Workspaces
+
+`workspaces/<dir>/` mirrors `~/projects/<dir>/` (override with `PROJECTS_DIR`). `setup.sh` links
+each file to the same path there, skipping any workspace whose directory doesn't exist yet and
+any destination that already holds a real file. Links that land inside a git repo are added to
+that repo's `.git/info/exclude`, so they never show up as untracked.
+
+How Claude Code picks these up, which decides what goes where:
+
+- **CLAUDE.md** loads from the working directory *and every parent*, so `my-workspace/CLAUDE.md`
+  reaches sessions started in `my-workspace/my-repo/` or `my-workspace/website/`. Put shared
+  principles here.
+- **Skills and `settings.json`** load only for the directory a session starts in, not from
+  parents. A workspace's `.claude/settings.json` governs sessions started at that level only,
+  so each repo needs its own. Skills meant for every project belong in `global/skills/`.
+- Claude can't edit through a symlink: change these files here, in `agents-setup`.
+
+Repos that already commit their own `CLAUDE.md`/`.claude/` (e.g. `my-workspace/my-repo`) get
+nothing from here beyond the parent `my-workspace/CLAUDE.md`.
 
 Skills read the templates through `$AGENTS_SETUP` (e.g. handoff2auto reads
 `$AGENTS_SETUP/templates/project/tasks/_template/00-step-handoff.md`), so the clone can live
