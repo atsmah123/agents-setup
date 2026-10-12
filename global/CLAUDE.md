@@ -83,7 +83,17 @@ If it only parses for someone with the file already open, rewrite it.
 
 ---
 
-## 6. Commits
+## 6. Python environments
+
+Your shell does not switch environments for you (the `cd` hook only runs in interactive
+terminals). Under `~/projects`, pick the interpreter by absolute path: the repo's own
+`.venv/bin/python3` if it has one, the env named in its `.conda-env` file if it has that, and
+otherwise the shared `~/miniforge3/envs/projects/bin/python3`. Never `pip install` into the
+shared env for one project's sake; that project needs its own environment.
+
+---
+
+## 7. Commits
 
 **Never add Claude/AI attribution to commits.** Do not include a `Co-Authored-By: Claude ...` trailer or any "Generated with Claude Code" line in commit messages or PR bodies. Write the message as the author's own.
 

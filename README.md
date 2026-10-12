@@ -20,6 +20,8 @@ workspaces/<dir>/             linked into ~/projects/<dir>/ by setup.sh, file by
 ├── my-workspace/                  supervisor CLAUDE.md + platform principles for every repo under it
 │   └── website/              CLAUDE.md pointing at the site's README house rules
 └── my-site/                CLAUDE.md for the personal site
+envs/projects.yml             the shared `projects` conda env
+shell/project-env.sh          switches env automatically on cd under ~/projects
 templates/project/            a project's .claude/ skeleton (copied, not linked)
 ├── CLAUDE.md                 project header to fill in
 ├── settings.json             plan mode by default; no edits to secrets; ask before commit/push
@@ -53,6 +55,32 @@ How Claude Code picks these up, which decides what goes where:
 
 Repos that already commit their own `CLAUDE.md`/`.claude/` (e.g. `my-workspace/my-repo`) get
 nothing from here beyond the parent `my-workspace/CLAUDE.md`.
+
+## Project environments
+
+Conda (Miniforge, `~/miniforge3`) provides one shared env, `projects`, defined in
+[`envs/projects.yml`](envs/projects.yml): Python 3.12, pytest, ruff, ipython, jq. It's for
+quick fixes in any repo that has no environment of its own.
+
+```bash
+conda env create -f envs/projects.yml   # once per machine, after installing Miniforge
+```
+
+`shell/project-env.sh` (sourced by the `setup.sh` block, interactive shells only) switches
+environment as you `cd`. Walking up from the current directory to `~/projects`, the first match
+wins:
+
+| Found | Activates |
+|---|---|
+| `.conda-env` (one line: an env name) | that conda env |
+| `.venv/` | that virtualenv (e.g. `my-workspace/my-repo`) |
+| nothing, but inside `~/projects` | `projects` |
+| outside `~/projects` | nothing (conda's auto-activated base is turned off) |
+
+To give a repo its own conda env: `conda create -n <name> ...`, then
+`echo <name> > <repo>/.conda-env` (add it to that repo's `.git/info/exclude` if it shouldn't be
+committed). Agents' tool shells are non-interactive and don't switch; skills and CLAUDE.md
+files name interpreters by absolute path instead.
 
 Skills read the templates through `$AGENTS_SETUP` (e.g. handoff2auto reads
 `$AGENTS_SETUP/templates/project/tasks/_template/00-step-handoff.md`), so the clone can live

@@ -1,0 +1,15 @@
+# Default environment for anything under ~/projects that has no environment of its own:
+# quick fixes, scripts, linting. Project-specific dependencies don't belong here; give that
+# project its own .venv or conda env instead (see README, "Project environments").
+#   conda env create -f envs/projects.yml        (first time)
+#   conda env update -f envs/projects.yml --prune (after editing this file)
+name: projects
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - ipython
+  - pytest
+  - ruff
+  - jq
