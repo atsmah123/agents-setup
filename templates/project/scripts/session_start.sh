@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# SessionStart hook: put the supervisor's start-of-session reading into every new session's context.
+cd "$(dirname "$0")/../.." || exit 0
+P=$(basename "$PWD")
+echo "$P SESSION START -- decide your role first (CLAUDE.md). SUPERVISOR (interactive): read TODO, EXPERIMENTS newest"
+echo "section, last 3 CHANGELOG entries and BOARD before the first answer; long work (code, GPU jobs, >30 min) goes to a"
+echo "worker via handoff2auto task doc + BOARD row + handoff prompt -- never run directly. WORKER: read your task doc in full."
+[ -f .claude/tasks/BOARD.md ] && { echo; echo "=== .claude/tasks/BOARD.md ==="; cat .claude/tasks/BOARD.md; }
+[ -f TODO.md ] && { echo; echo "=== TODO.md ==="; cat TODO.md; }
+[ -f CHANGELOG.md ] && { echo; echo "=== CHANGELOG.md, last 3 entries (headings) ==="; grep -n '^## ' CHANGELOG.md | head -3 | cut -c1-300; }
+exit 0

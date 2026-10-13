@@ -23,14 +23,21 @@ workspaces/<dir>/             linked into ~/projects/<dir>/ by setup.sh, file by
 envs/projects.yml             the shared `projects` conda env
 shell/project-env.sh          switches env automatically on cd under ~/projects
 templates/project/            a project's .claude/ skeleton (copied, not linked)
-├── CLAUDE.md                 project header to fill in
-├── settings.json             plan mode by default; no edits to secrets; ask before commit/push
+├── CLAUDE.md                 project header to fill in; supervisor/worker roles and session start
+├── settings.json             auto mode by default; no edits to secrets; ask before commit/push;
+│                             SessionStart hook running scripts/session_start.sh
+├── scripts/session_start.sh  prints BOARD, TODO and recent CHANGELOG headings into each session
 ├── context/                  facts about the project (repo map, dependencies, docs guide)
 ├── research/                 objectives, methodology, theory, early discussions
 ├── docs/                     polished reports (see context/docs-writing-guide.md)
 └── tasks/                    working history by phase; _template/ holds step, handoff,
-                              training-handoff and post-mortem templates
+                              training-handoff and post-mortem templates; BOARD.md tracks
+                              work handed to worker sessions
 ```
+
+`init-project.sh` only adds missing files, so a project that already has `.claude/settings.json`
+or `.claude/CLAUDE.md` won't pick up the SessionStart hook or the supervisor rules: merge the
+`hooks` block and the two CLAUDE.md sections in by hand.
 
 Global files are **symlinked**, so editing them here changes every session on this machine; commit
 and push to carry the change to other machines. Project files are **copied**, because each project
