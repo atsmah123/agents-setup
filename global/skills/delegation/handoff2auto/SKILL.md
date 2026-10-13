@@ -117,6 +117,9 @@ though it should point at the task doc as the full reference. Include:
 6. Explicit exclusions -- what not to touch.
 7. A closing instruction to work autonomously and only check in at the gates specified.
 
+If the project has a `.claude/tasks/BOARD.md`, add a row for this task (or update its existing
+row): the task, the task doc's path, status `handed off`, today's date.
+
 Show both the task doc's location and the full handoff message text to the user when done, so
 they can paste the message directly.
 
