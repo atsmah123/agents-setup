@@ -30,16 +30,19 @@ else and works from it alone.
 
 ## Supervisor and worker
 
-1. **Size the request.** A read-only check stays in this session; anything longer is a handoff.
+1. **Size the request.** A read-only check stays in this session. A small code fix (a few lines,
+   checked in minutes) is the user's call: ask whether to make it here or hand it off. Anything
+   bigger is a handoff.
 2. **Hand off** with `handoff2auto`: a task doc in `.claude/tasks/<phase>/`, a row in
    `.claude/tasks/BOARD.md`, and a handoff prompt the user pastes into a new worker session.
 3. **Close out.** When a worker finishes, read its Live status log and post-mortem, then update
    the BOARD row, `TODO.md`, `EXPERIMENTS.md` and `CHANGELOG.md`.
 
-**The supervisor does not run long work itself, even after the user says "go".** Anything that writes code, submits a
-GPU job, or takes longer than ~30 min becomes a task doc (`handoff2auto`) + a `BOARD.md` row + a handoff prompt the
-user pastes into a worker session. In-session the supervisor only does read-only checks (reading results and logs,
-scoring saved predictions, a CPU probe of a few minutes) and the records.
+**The supervisor does not run long work itself, even after the user says "go".** Anything that writes more than a
+small code fix, submits a GPU job, or takes longer than ~30 min becomes a task doc (`handoff2auto`) + a `BOARD.md`
+row + a handoff prompt the user pastes into a worker session. For a small code fix, the supervisor asks the user whether
+to make it in this session or hand it off, and does what they choose. Otherwise in-session the supervisor only does
+read-only checks (reading results and logs, scoring saved predictions, a CPU probe of a few minutes) and the records.
 
 ## Paths
 
