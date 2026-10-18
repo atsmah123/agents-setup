@@ -122,7 +122,7 @@ fi
 
 # Projects: directories that get a project .claude/ skeleton and are switched into by shell/project-env.sh.
 # Found in the projects folder: every folder in it, and every repo inside a folder that is not itself a repo
-# (a workspace like my-workspace/ holding website/ and my-repo/). This clone is never one.
+# (a workspace folder holding several repos). This clone is never one.
 if [ -n "$projects_dir" ]; then
   new=()
   for d in "$projects_dir"/*/; do

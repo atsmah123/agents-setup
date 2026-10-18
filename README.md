@@ -10,27 +10,21 @@ that can't go in their own repo live on the private `project-files` branch.
 
 Needs `git`, `bash` and `rsync`; conda (e.g. Miniforge) is optional, for the shared Python env.
 
-Do the steps in this order: each one only adds files that are missing, so whatever lands first is kept.
-
-1. **Clone your project repos** (e.g. into `~/projects/`). Later steps write into those directories, and
-   `git clone` refuses a directory that already exists.
-2. **Clone this repo and restore the private project files.**
+1. **Clone your project repos into one folder,** e.g. `~/projects/`.
+2. **Clone this repo and run setup.**
    ```bash
    git clone <this repo's URL> ~/agents-setup
-   cd ~/agents-setup
-   git worktree add .worktrees/project-files project-files
-   .worktrees/project-files/sync.sh restore      # never overwrites an existing file
-   ```
-   Projects somewhere other than `~/projects`? Prefix with `PROJECTS_DIR=/path/to/projects`.
-3. **Run setup.**
-   ```bash
    ~/agents-setup/setup.sh
    ```
-   It links the global layer into `~/.claude`, then asks which directories are projects (space-separated, e.g.
-   `~/projects/my-site ~/projects/my-workspace ~/projects/my-workspace/website`). Each one gets the `.claude/` template
-   files it is still missing. Re-running is safe.
-4. **Optional, the shared Python env:** `conda env create -f ~/agents-setup/envs/projects.yml`
-5. **Open a new shell, then start Claude Code in a project.** The first session on each machine says so at the top
+   It asks two things:
+   - **Where do your projects live?** Press Enter for `~/projects`. Asked once; the answer is remembered.
+   - **Set them all up?** It lists what it found there: each folder, plus the repos inside a folder that isn't a repo
+     itself (e.g. `my-workspace/website`). Enter sets them all up; `n` lets you name the ones you want.
+
+   It also puts back your private project files (see below) before adding any template files, so your real files
+   always win. Nothing that already exists is overwritten, and re-running is safe.
+3. **Optional, the shared Python env:** `conda env create -f ~/agents-setup/envs/projects.yml`
+4. **Open a new shell, then start Claude Code in a project.** The first session on each machine says so at the top
    and asks you about paths, environment and compute, then writes that machine's section into the project's
    `.claude/SETUP.md`. Later sessions read it and don't ask again.
 
@@ -38,17 +32,20 @@ Do the steps in this order: each one only adds files that are missing, so whatev
 
 | To | Do |
 |---|---|
-| Add a project | `~/agents-setup/setup.sh --project <dir>` |
+| Add a project | put it in your projects folder and run `./setup.sh` (it offers new ones); anywhere else: `./setup.sh --project <dir>` |
+| Bring a machine up to date | `git pull && ./setup.sh` |
 | Change the global guidelines or a skill | edit `global/` here (it is linked, so it applies at once), then commit and push |
-| Save edits to private project files | `.worktrees/project-files/sync.sh save`, then `git -C .worktrees/project-files push` |
-| Bring another machine up to date | `git pull && git -C .worktrees/project-files pull && .worktrees/project-files/sync.sh restore && ./setup.sh` |
+| Save edits to private project files | `.worktrees/project-files/sync.sh save && git -C .worktrees/project-files push` |
 | Add a skill | create `global/skills/<group>/<name>/SKILL.md` (frontmatter `name` = folder name), run `./setup.sh` |
+| Move the projects folder | `./setup.sh --projects-dir <dir>` |
 
 Claude can't edit through a symlink, so change global files here, in this repo, not in `~/.claude`.
 
-`sync.sh restore` never overwrites, so to take a newer version of a file that already exists on this machine, delete
-the local copy first, or copy it from `.worktrees/project-files/` by hand. The file list `sync.sh` keeps is at the top
-of the script; add a path there to keep another file.
+**Private project files** are the ones no project repo can hold, because the repo is public or a team's, or the
+folder isn't a repo (e.g. a workspace folder's CLAUDE.md and `.claude/`). They live on this repo's private
+`project-files` branch, which `setup.sh` checks out at `.worktrees/project-files/` and restores from. Restoring
+never overwrites, so to take a newer version of a file this machine already has, delete the local copy and re-run
+`./setup.sh`. The list of files kept is at the top of `.worktrees/project-files/sync.sh`.
 
 ## What's in here
 
@@ -74,9 +71,6 @@ templates/project/            a project's .claude/ skeleton (copied, not linked)
                               work handed to worker sessions
 ```
 
-The `project-files` branch (checked out at `.worktrees/project-files/`, gitignored) holds `sync.sh` and copies of
-project files that no project repo can hold: the repo is public or a team's, or the directory isn't a repo.
-
 ## Reference
 
 ### Working conventions (every project)
@@ -98,7 +92,8 @@ project files that no project repo can hold: the repo is public or a team's, or 
 
 - **Global files are linked**, so editing them here changes every session on this machine; commit and push to carry
   the change to other machines. **Project files are copied**, because each project fills them in.
-- **Projects** are recorded in `~/.config/agents-setup/projects`, a machine-local list the env switching reads.
+- **Your answers stay on this machine,** in `~/.config/agents-setup/`: `projects-dir` (the projects folder) and
+  `projects` (the projects set up, one path per line, which the env switching reads). Edit them freely.
   A project that keeps its CLAUDE.md at the root gets no `.claude/CLAUDE.md`, since Claude Code would load both.
 - **Existing files are never displaced.** If `~/.claude/CLAUDE.md` or a skill folder already exists and is not a link
   into this repo, `setup.sh` leaves it alone and prints a `diff` command so you can merge by hand; `--replace` moves
@@ -107,7 +102,7 @@ project files that no project repo can hold: the repo is public or a team's, or 
   `.claude/settings.json` or `.claude/CLAUDE.md` needs the `hooks` block and the CLAUDE.md session sections merged in
   by hand; an updated `scripts/session_start.sh` is copied over by hand.
 - **Older versions** linked per-directory files from a `workspaces/` folder into project directories. `setup.sh`
-  turns any such link it finds (in registered projects, or in `$PROJECTS_DIR` / `~/projects`) into a real copy of
+  turns any such link it finds (in the projects folder or any project) into a real copy of
   its content, taken from this repo's git history if the file is gone.
 
 How Claude Code picks up these files, which decides what goes where:
