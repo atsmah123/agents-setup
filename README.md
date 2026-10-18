@@ -71,6 +71,10 @@ machine stays on that machine:
   turns any such link it finds (in registered projects, or in `$PROJECTS_DIR` / `~/projects` if that exists) into a
   real copy of its content, taken from this repo's git history if the file is gone.
 
+- **Files no project repo can hold** (the repo is public or a team's, or the directory isn't a repo) are kept on the
+  private `project-files` branch, never on main. Its `sync.sh` saves them from the projects and restores them on a new
+  machine without overwriting anything; the header says how to check it out.
+
 How Claude Code picks up these files, which decides what goes where:
 
 - **CLAUDE.md** loads from the working directory *and every parent*, so a CLAUDE.md in a parent directory reaches
