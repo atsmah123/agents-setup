@@ -41,7 +41,7 @@ Do the steps in this order: each one only adds files that are missing, so whatev
 | Add a project | `~/agents-setup/setup.sh --project <dir>` |
 | Change the global guidelines or a skill | edit `global/` here (it is linked, so it applies at once), then commit and push |
 | Save edits to private project files | `.worktrees/project-files/sync.sh save`, then `git -C .worktrees/project-files push` |
-| Bring another machine up to date | `git pull && ./setup.sh`, then `git -C .worktrees/project-files pull && .worktrees/project-files/sync.sh restore` |
+| Bring another machine up to date | `git pull && git -C .worktrees/project-files pull && .worktrees/project-files/sync.sh restore && ./setup.sh` |
 | Add a skill | create `global/skills/<group>/<name>/SKILL.md` (frontmatter `name` = folder name), run `./setup.sh` |
 
 Claude can't edit through a symlink, so change global files here, in this repo, not in `~/.claude`.
