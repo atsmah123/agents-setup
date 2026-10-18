@@ -21,7 +21,7 @@ apply — but delete it deliberately, don't skip it silently.
 
 [What this stage produces and why it's scoped this way — for an agent with ZERO conversation
 history. State plainly what "done" looks like as a *model outcome* (e.g. "an AE that reconstructs
-field X to rel-L2 < Y", "a JEPA trunk that trains without representation collapse"), not just
+field X to rel-L2 < Y", "a self-supervised encoder that trains without representation collapse"), not just
 "train a model". If this is one stage of a sequence, say where it sits and what the next stage
 inherits. Call out structural decisions inherited from earlier discussion, with a pointer to
 where they were made.]
@@ -275,5 +275,4 @@ control or did it wander; every honest cause of any shortfall across THREE categ
 task-design, your own process, AND human-steer (the human WANTS the steer feedback); the single
 change that would most have kept it grounded; and what went right to carry forward. This is a
 primary input to refining the template and any eventual skill — a specific, uncomfortable account
-is worth far more than a clean-looking one. (The B1-attempt-1 post-mortem in
-variational-jepa-generalisation is the worked exemplar.)
+is worth far more than a clean-looking one.
