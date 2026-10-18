@@ -20,8 +20,8 @@ CHANGELOG headings into every new session.
 
 The SUPERVISOR reads these BEFORE its first answer -- every session, also one resumed mid-task:
 
-0. `.claude/SETUP.md` -- this machine's section (paths, environment, compute and how to check it). If the file or
-   this machine's section is missing, this is the FIRST supervisor session here: settle the setup with the user and
+0. `.claude/SETUP.md` -- this machine's section (paths, environment, compute and how to check it). If the file is
+   missing, still the blank template, or has no section for this machine, this is the FIRST supervisor session here: settle the setup with the user and
    write it down before any project work (global `CLAUDE.md` section 8). Check live compute before asking any
    compute question.
 1. `TODO.md` -- open work.
