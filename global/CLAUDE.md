@@ -86,10 +86,12 @@ If it only parses for someone with the file already open, rewrite it.
 ## 6. Python environments
 
 Your shell does not switch environments for you (the `cd` hook only runs in interactive
-terminals). Under `~/projects`, pick the interpreter by absolute path: the repo's own
+terminals). In a project, pick the interpreter by absolute path: the repo's own
 `.venv/bin/python3` if it has one, the env named in its `.conda-env` file if it has that, and
-otherwise the shared `~/miniforge3/envs/projects/bin/python3`. Never `pip install` into the
-shared env for one project's sake; that project needs its own environment.
+otherwise the shared `projects` conda env (`<conda base>/envs/projects/bin/python3`) if the machine
+has one. A project's own CLAUDE.md or `.claude/SETUP.md` overrides this (e.g. a container wrapper).
+Never `pip install` into the shared env for one project's sake; that project needs its own
+environment.
 
 ---
 

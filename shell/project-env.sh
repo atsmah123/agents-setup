@@ -1,16 +1,23 @@
-# Switch Python environment automatically as you cd around $PROJECTS_DIR (default ~/projects).
+# Switch Python environment automatically as you cd into a registered project.
 # Sourced by the agents-setup block in ~/.bashrc / ~/.zshrc, interactive shells only.
 #
-# At each prompt, walk up from the current directory to $PROJECTS_DIR. The first directory with
+# Projects are the directories listed in ~/.config/agents-setup/projects (one absolute path per line; setup.sh
+# writes it -- machine-local, never in this repo). Inside a project, walk up from the current directory to the
+# project's root. The first directory with
 #   .conda-env   (one line: a conda env name)  -> conda activate that env
 #   .venv/       (a virtualenv)                 -> source .venv/bin/activate
-# wins. Anywhere else under $PROJECTS_DIR the `projects` conda env (envs/projects.yml) is used;
-# outside it, everything is deactivated. Nothing happens unless the target changes, so a
-# manual `conda activate` lasts until you move to a directory with a different target.
+# wins; otherwise the shared `projects` conda env (envs/projects.yml) is used. Outside every project, everything is
+# deactivated. Nothing happens unless the target changes, so a manual `conda activate` lasts until you move to a
+# directory with a different target.
 
 _project_env_target() {
-  local root="${PROJECTS_DIR:-$HOME/projects}" d="$PWD"
-  case "$d/" in "$root"/*) ;; *) return ;; esac
+  local reg="${XDG_CONFIG_HOME:-$HOME/.config}/agents-setup/projects" root="" p d="$PWD"
+  [ -f "$reg" ] || return
+  while read -r p; do                       # the deepest registered project that contains $PWD
+    [ -n "$p" ] || continue
+    case "$d/" in "$p"/*) [ ${#p} -gt ${#root} ] && root=$p ;; esac
+  done < "$reg"
+  [ -n "$root" ] || return
   while :; do
     if [ -f "$d/.conda-env" ]; then echo "conda:$(head -n1 "$d/.conda-env")"; return; fi
     if [ -f "$d/.venv/bin/activate" ]; then echo "venv:$d/.venv"; return; fi

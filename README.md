@@ -4,8 +4,8 @@ Portable Claude Code configuration: one global layer for every machine, one proj
 every repo. Clone it anywhere and run the setup script.
 
 ```bash
-git clone https://github.com/atsmah123/agents-setup.git ~/agents-setup
-~/agents-setup/setup.sh                  # global layer into ~/.claude, AGENTS_SETUP in your shell rc
+git clone <this repo's URL> ~/agents-setup
+~/agents-setup/setup.sh                  # global layer into ~/.claude; asks which directories are projects
 ~/agents-setup/init-project.sh <repo>    # scaffold <repo>/.claude/ (adds missing files only)
 ```
 
@@ -16,12 +16,8 @@ global/                       linked into ~/.claude by setup.sh
 ├── CLAUDE.md                 behavioural guidelines for every project
 └── skills/<group>/<skill>/   skills, grouped by what they do
     └── delegation/handoff2auto/   hand long-running work to a detached agent
-workspaces/<dir>/             linked into ~/projects/<dir>/ by setup.sh, file by file
-├── my-workspace/                  supervisor CLAUDE.md + platform principles for every repo under it
-│   └── website/              CLAUDE.md pointing at the site's README house rules
-└── my-site/                CLAUDE.md for the personal site
 envs/projects.yml             the shared `projects` conda env
-shell/project-env.sh          switches env automatically on cd under ~/projects
+shell/project-env.sh          switches env automatically on cd into a registered project
 templates/project/            a project's .claude/ skeleton (copied, not linked)
 ├── CLAUDE.md                 project header to fill in; supervisor/worker roles and session start
 ├── SETUP.md                  per-machine setup (paths, env, compute + how to check it), written by the
@@ -59,46 +55,49 @@ Global files are **symlinked**, so editing them here changes every session on th
 and push to carry the change to other machines. Project files are **copied**, because each project
 fills them in.
 
-## Workspaces
+## Projects and what setup.sh touches
 
-`workspaces/<dir>/` mirrors `~/projects/<dir>/` (override with `PROJECTS_DIR`). `setup.sh` links
-each file to the same path there, skipping any workspace whose directory doesn't exist yet and
-any destination that already holds a real file. Links that land inside a git repo are added to
-that repo's `.git/info/exclude`, so they never show up as untracked.
+This repo holds nothing about any particular machine or directory, so it can be shared as is. What is specific to a
+machine stays on that machine:
 
-How Claude Code picks these up, which decides what goes where:
+- **Projects** are the directories you name when `setup.sh` asks (or pass with `--project DIR`). Each gets a
+  `.claude/` skeleton from `templates/project/` -- missing files only, never an overwrite -- and is recorded in
+  `~/.config/agents-setup/projects`, a machine-local list the env switching reads. A project's machine-specific
+  facts (paths, compute, environment) go in its own `.claude/SETUP.md`, written by its first supervisor session.
+- **Existing files are never displaced.** If `~/.claude/CLAUDE.md` or a skill folder already exists and is not a link
+  into this repo, `setup.sh` leaves it alone and prints a `diff` command so you can merge by hand; `--replace` moves
+  it aside to `<name>.bak.<timestamp>` instead.
+- **Older versions** linked per-directory files from a `workspaces/` folder into project directories. `setup.sh`
+  turns any such link it finds (in registered projects, or in `$PROJECTS_DIR` / `~/projects` if that exists) into a
+  real copy of its content, taken from this repo's git history if the file is gone.
 
-- **CLAUDE.md** loads from the working directory *and every parent*, so `my-workspace/CLAUDE.md`
-  reaches sessions started in `my-workspace/my-repo/` or `my-workspace/website/`. Put shared
-  principles here.
-- **Skills and `settings.json`** load only for the directory a session starts in, not from
-  parents. A workspace's `.claude/settings.json` governs sessions started at that level only,
-  so each repo needs its own. Skills meant for every project belong in `global/skills/`.
-- Claude can't edit through a symlink: change these files here, in `agents-setup`.
+How Claude Code picks up these files, which decides what goes where:
 
-Repos that already commit their own `CLAUDE.md`/`.claude/` (e.g. `my-workspace/my-repo`) get
-nothing from here beyond the parent `my-workspace/CLAUDE.md`.
+- **CLAUDE.md** loads from the working directory *and every parent*, so a CLAUDE.md in a parent directory reaches
+  every repo below it. Put principles shared by several repos there.
+- **Skills and `settings.json`** load only for the directory a session starts in, not from parents, so each repo
+  needs its own `.claude/settings.json`. Skills meant for every project belong in `global/skills/`.
 
 ## Project environments
 
-Conda (Miniforge, `~/miniforge3`) provides one shared env, `projects`, defined in
+Conda provides one shared env, `projects`, defined in
 [`envs/projects.yml`](envs/projects.yml): Python 3.12, pytest, ruff, ipython, jq. It's for
 quick fixes in any repo that has no environment of its own.
 
 ```bash
-conda env create -f envs/projects.yml   # once per machine, after installing Miniforge
+conda env create -f envs/projects.yml   # once per machine, after installing conda (e.g. Miniforge)
 ```
 
 `shell/project-env.sh` (sourced by the `setup.sh` block, interactive shells only) switches
-environment as you `cd`. Walking up from the current directory to `~/projects`, the first match
-wins:
+environment as you `cd`. Inside a registered project, walking up from the current directory to the
+project's root, the first match wins:
 
 | Found | Activates |
 |---|---|
 | `.conda-env` (one line: an env name) | that conda env |
-| `.venv/` | that virtualenv (e.g. `my-workspace/my-repo`) |
-| nothing, but inside `~/projects` | `projects` |
-| outside `~/projects` | nothing (conda's auto-activated base is turned off) |
+| `.venv/` | that virtualenv |
+| nothing, but inside a registered project | `projects` |
+| outside every registered project | nothing (conda's auto-activated base is turned off) |
 
 To give a repo its own conda env: `conda create -n <name> ...`, then
 `echo <name> > <repo>/.conda-env` (add it to that repo's `.git/info/exclude` if it shouldn't be

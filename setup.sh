@@ -1,78 +1,116 @@
 #!/usr/bin/env bash
-# Install this setup into ~/.claude on the current machine. Safe to re-run.
-#   - global/CLAUDE.md          -> ~/.claude/CLAUDE.md
-#   - every dir under global/skills/ that holds a SKILL.md -> ~/.claude/skills/<dir name>
-#   - workspaces/<dir>/...      -> $PROJECTS_DIR/<dir>/... (default ~/projects), file by file
-#   - AGENTS_SETUP exported in ~/.bashrc / ~/.zshrc (skills read templates/ through it)
-# Anything real already at a destination is moved aside to <name>.bak.<timestamp>, never deleted.
+# Install agents-setup on this machine. Safe to re-run.
+#   - global/CLAUDE.md -> ~/.claude/CLAUDE.md and every skill dir -> ~/.claude/skills/<name> (symlinks)
+#   - asks which directories are PROJECTS; each one gets init-project.sh (adds missing .claude/ files, never
+#     overwrites) and is recorded in ~/.config/agents-setup/projects -- a machine-local list, never in this repo
+#   - AGENTS_SETUP exported at the top of ~/.bashrc / ~/.zshrc (skills read templates/ through it)
+#
+# Never displaces what you already have: a real file or a foreign symlink at a destination is left alone and
+# listed with a diff command, so you can merge by hand. Only links that point into this repo are refreshed.
+# --replace moves an existing destination aside to <name>.bak.<timestamp> and links instead (the old behaviour).
+#
+# Usage: ./setup.sh [--replace] [--project DIR]... [--no-ask]
 set -euo pipefail
 
 AGENTS_SETUP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
-mkdir -p "$CLAUDE_HOME/skills"
+REGISTRY="${XDG_CONFIG_HOME:-$HOME/.config}/agents-setup/projects"
+replace=0 ask=1 projects=()
+while [ $# -gt 0 ]; do
+  case $1 in
+    --replace) replace=1 ;;
+    --no-ask) ask=0 ;;
+    --project) shift; projects+=("$1") ;;
+    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    *) echo "unknown argument: $1" >&2; exit 2 ;;
+  esac
+  shift
+done
+mkdir -p "$CLAUDE_HOME/skills" "$(dirname "$REGISTRY")"
+touch "$REGISTRY"
+kept=()
 
 link() {
   local src=$1 dest=$2
-  if [ -L "$dest" ]; then
-    rm "$dest"
-  elif [ -e "$dest" ]; then
-    mv "$dest" "$dest.bak.$(date +%Y%m%d%H%M%S)"
-    echo "backed up $dest"
+  if [ -L "$dest" ] && [ "$(readlink "$dest")" = "$src" ]; then
+    echo "ok      $dest"; return
+  fi
+  if [ -L "$dest" ] && case "$(readlink "$dest")" in "$AGENTS_SETUP"/*) true ;; *) false ;; esac; then
+    rm "$dest"                                          # our own link, from an older layout: refresh it
+  elif [ -e "$dest" ] || [ -L "$dest" ]; then
+    if [ "$replace" = 1 ]; then
+      mv "$dest" "$dest.bak.$(date +%Y%m%d%H%M%S)"; echo "backed up $dest"
+    else
+      kept+=("$dest|$src"); echo "kept    $dest (yours; not replaced)"; return
+    fi
   fi
   ln -s "$src" "$dest"
-  echo "linked $dest -> $src"
+  echo "linked  $dest -> $src"
 }
 
 link "$AGENTS_SETUP/global/CLAUDE.md" "$CLAUDE_HOME/CLAUDE.md"
 
-# Skills are grouped in the source tree (global/skills/<group>/<skill>/SKILL.md) but Claude Code
-# only reads ~/.claude/skills/<skill>/, so each skill is linked flat under its own name. A group
-# folder that gets its own SKILL.md (a router) is linked the same way, under the group's name.
-find "$AGENTS_SETUP/global/skills" -name SKILL.md | sort | while read -r f; do
+# Skills are grouped in the source tree (global/skills/<group>/<skill>/SKILL.md) but Claude Code only reads
+# ~/.claude/skills/<skill>/, so each skill is linked flat under its own name.
+while read -r f; do
   d=$(dirname "$f")
   link "$d" "$CLAUDE_HOME/skills/$(basename "$d")"
+done < <(find "$AGENTS_SETUP/global/skills" -name SKILL.md | sort)
+
+# Projects: directories that get a project .claude/ skeleton and are switched into by shell/project-env.sh.
+if [ "$ask" = 1 ] && [ -t 0 ]; then
+  if [ -s "$REGISTRY" ]; then echo; echo "registered projects:"; sed 's/^/  /' "$REGISTRY"; fi
+  echo
+  read -r -p "Directories to set up as projects (space-separated, empty to skip): " -a more || true
+  projects+=("${more[@]}")
+fi
+for p in "${projects[@]}"; do
+  [ -n "$p" ] || continue
+  p="${p/#\~/$HOME}"
+  if [ ! -d "$p" ]; then echo "skipped project $p: no such directory"; continue; fi
+  p="$(cd "$p" && pwd)"
+  "$AGENTS_SETUP/init-project.sh" "$p" | sed "s|^|  $p: |"
+  grep -qxF "$p" "$REGISTRY" || echo "$p" >> "$REGISTRY"
+  echo "project $p"
 done
 
-# Workspace layers: workspaces/<dir>/<path> -> $PROJECTS_DIR/<dir>/<path>, file by file, so real
-# files (tasks/, settings.local.json) can sit beside the links. Only for dirs that exist here.
-# A real file at a destination is left alone (it may be tracked in a repo). Links that land
-# inside a git repo are added to its .git/info/exclude so they never show up as untracked.
-PROJECTS_DIR="${PROJECTS_DIR:-$HOME/projects}"
-for ws in "$AGENTS_SETUP"/workspaces/*/; do
-  [ -d "$ws" ] || continue
-  name=$(basename "$ws")
-  if [ ! -d "$PROJECTS_DIR/$name" ]; then
-    echo "skipped workspace $name: $PROJECTS_DIR/$name does not exist"
-    continue
-  fi
-  (cd "$ws" && find . -type f) | sort | while read -r f; do
-    rel=${f#./}
-    dest="$PROJECTS_DIR/$name/$rel"
-    if [ -e "$dest" ] && [ ! -L "$dest" ]; then
-      echo "skipped $dest: a real file is already there"
-      continue
+# One-time migration: earlier versions linked per-directory files from a workspaces/ folder in this repo into
+# project directories. Any such link still present is replaced by a real copy of its content (from the file if it
+# is still here, else from this repo's git history), so nothing it held is lost and nothing points back here.
+roots=()
+while read -r p; do [ -n "$p" ] && roots+=("$p"); done < "$REGISTRY"
+[ -d "${PROJECTS_DIR:-$HOME/projects}" ] && roots+=("${PROJECTS_DIR:-$HOME/projects}")
+for root in "${roots[@]}"; do
+  [ -d "$root" ] || continue
+  while read -r l; do
+    rel=$(readlink "$l"); rel=${rel#"$AGENTS_SETUP"/}
+    tmp="$l.agents-setup-copy"
+    if [ -f "$AGENTS_SETUP/$rel" ]; then
+      cp "$AGENTS_SETUP/$rel" "$tmp"
+    else
+      gone=$(git -C "$AGENTS_SETUP" rev-list -n 1 HEAD -- "$rel" 2>/dev/null || true)
+      if [ -z "$gone" ] || ! git -C "$AGENTS_SETUP" show "$gone^:$rel" > "$tmp" 2>/dev/null; then
+        rm -f "$tmp"; echo "could not recover $l (was a link to $rel); left as is"; continue
+      fi
     fi
-    mkdir -p "$(dirname "$dest")"
-    link "$ws$rel" "$dest"
-    top=$(git -C "$(dirname "$dest")" rev-parse --show-toplevel 2>/dev/null) || continue
-    exclude="$(git -C "$top" rev-parse --git-path info/exclude)"
-    case $exclude in /*) ;; *) exclude="$top/$exclude" ;; esac
-    entry="/${dest#"$top"/}"
-    mkdir -p "$(dirname "$exclude")"
-    grep -qxF "$entry" "$exclude" 2>/dev/null || echo "$entry" >> "$exclude"
-  done
+    mv "$tmp" "$l"; echo "copied  $l (was a link into this repo)"
+  done < <(find "$root" -maxdepth 4 -type l -lname "$AGENTS_SETUP/workspaces/*" 2>/dev/null)
 done
 
 start='# >>> agents-setup >>>'
 end='# <<< agents-setup <<<'
 for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
   [ -f "$rc" ] || continue
-  # drop an earlier block (the repo may have moved), then put the current one at the TOP: a
-  # stock ~/.bashrc returns early for non-interactive shells, and agents' tool shells are those
+  # drop an earlier block (the repo may have moved), then put the current one at the TOP: a stock ~/.bashrc
+  # returns early for non-interactive shells, and agents' tool shells are those
   { printf '%s\nexport AGENTS_SETUP="%s"\n[[ $- == *i* ]] && . "$AGENTS_SETUP/shell/project-env.sh"\n%s\n' "$start" "$AGENTS_SETUP" "$end"
     awk -v s="$start" -v e="$end" '$0==s{skip=1} !skip{print} $0==e{skip=0}' "$rc"; } > "$rc.tmp"
   cat "$rc.tmp" > "$rc" && rm "$rc.tmp"
   echo "AGENTS_SETUP set in $rc"
 done
 
+if [ ${#kept[@]} -gt 0 ]; then
+  echo; echo "Left alone (already yours). Merge by hand if you want this repo's version, or re-run with --replace:"
+  for k in "${kept[@]}"; do echo "  diff -r ${k%%|*} ${k#*|}"; done
+fi
 echo "done. open a new shell (or: export AGENTS_SETUP=\"$AGENTS_SETUP\")"

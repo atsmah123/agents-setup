@@ -1,4 +1,4 @@
-# Default environment for anything under ~/projects that has no environment of its own:
+# Default environment for any registered project (see setup.sh) that has no environment of its own:
 # quick fixes, scripts, linting. Project-specific dependencies don't belong here; give that
 # project its own .venv or conda env instead (see README, "Project environments").
 #   conda env create -f envs/projects.yml        (first time)
