@@ -61,7 +61,7 @@ This repo holds nothing about any particular machine or directory, so it can be 
 machine stays on that machine:
 
 - **Projects** are the directories you name when `setup.sh` asks (or pass with `--project DIR`). Each gets a
-  `.claude/` skeleton from `templates/project/` -- missing files only, never an overwrite -- and is recorded in
+  `.claude/` skeleton from `templates/project/` -- missing files only, never an overwrite, and no `.claude/CLAUDE.md` if the project keeps one at its root -- and is recorded in
   `~/.config/agents-setup/projects`, a machine-local list the env switching reads. A project's machine-specific
   facts (paths, compute, environment) go in its own `.claude/SETUP.md`, written by its first supervisor session.
 - **Existing files are never displaced.** If `~/.claude/CLAUDE.md` or a skill folder already exists and is not a link

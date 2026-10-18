@@ -92,9 +92,13 @@ for root in "${roots[@]}"; do
       if [ -z "$gone" ] || ! git -C "$AGENTS_SETUP" show "$gone^:$rel" > "$tmp" 2>/dev/null; then
         rm -f "$tmp"; echo "could not recover $l (was a link to $rel); left as is"; continue
       fi
+      # git show writes plain text; restore the executable bit, or SessionStart hook scripts fail silently
+      [ "$(git -C "$AGENTS_SETUP" ls-tree "$gone^" -- "$rel" | cut -c1-6)" = 100755 ] && chmod +x "$tmp"
     fi
     mv "$tmp" "$l"; echo "copied  $l (was a link into this repo)"
-  done < <(find "$root" -maxdepth 4 -type l -lname "$AGENTS_SETUP/workspaces/*" 2>/dev/null)
+  # no depth limit: workspace links sat up to <dir>/<repo>/.claude/scripts/<file>; heavy dirs are pruned instead
+  done < <(find "$root" \( -name .git -o -name node_modules -o -name .venv -o -name .worktrees \) -prune \
+             -o -type l -lname "$AGENTS_SETUP/workspaces/*" -print 2>/dev/null)
 done
 
 start='# >>> agents-setup >>>'
