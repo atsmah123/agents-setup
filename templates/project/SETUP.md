@@ -2,8 +2,10 @@
 
 Written by the FIRST supervisor session in this directory on each machine, together with the user, and read by every
 later supervisor session before its first answer (`CLAUDE.md` -> Start of session). Later sessions ask only about what
-is missing here or has changed -- never the same setup question twice. One section per machine; the SessionStart hook
-prints this file and the current host so a session can tell whether its machine has a section yet.
+is missing here or has changed -- never the same setup question twice. One section per machine. The SessionStart hook
+finds this machine's section by its `hosts:` patterns (shell globs in backticks, matched against `hostname -s` and
+`hostname -f`); with no match it flags a first session. The first real section replaces the `[name]` template below,
+and each further machine adds its own.
 
 ## Machine: [name] (hosts: [hostname pattern, e.g. `login*`, `gpu-node-0[1-4]`])
 
