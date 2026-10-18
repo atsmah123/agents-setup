@@ -120,6 +120,20 @@ bug is in your own code):
    finding the bottleneck was the real constraint — the width null-result was measured on the
    wrong axis). Prescribe the capacity ladder order explicitly so the agent can't invert it.
 
+## Fixed reading and trust gates
+
+**Fixed reading** -- copied into the experiment's README BEFORE the first number exists: [what counts as "helps /
+hurts / tie": a threshold on the primary metric AND a paired count, e.g. "<= -5% with k >= 35 / 50 samples better";
+read against the measured seed / run-to-run spread]. A reading chosen after seeing the result is not a reading.
+
+**Gates** (each a hard STOP if it fails; delete the ones that do not apply):
+- **Premise gate:** [a cheap check, before the expensive stage, that the change can matter at all -- threshold].
+- **Reproduction gate:** [copied scripts / a retrained control reproduce a recorded number -- which, tolerance --
+  before any new arm is read].
+- **Null control:** if results are split post hoc by the control's own error (hard vs easy samples, high- vs
+  low-error regions), include an arm that carries no information and read every split against it -- such splits
+  produce "helps the hard cases, hurts the easy ones" from regression to the mean alone.
+
 ## Silent-failure / collapse watch
 
 [The failure mode where **the loss looks fine but the model is actually broken** — the thing a
@@ -143,8 +157,10 @@ log.]
 ## Autonomy envelope (architecture/hyperparameter search)
 
 **Free to modify (no need to ask):** [the search space that IS the task — e.g. depth, widths,
-latent size, LR/optimizer/schedule, batch size, the training loop]. Work in a **git worktree/branch**
-so this is isolated and reviewable; commit one experiment per commit.
+latent size, LR/optimizer/schedule, batch size, the training loop]. Work in a **git worktree at
+`.worktrees/<run>` on branch `wt/<run>`, inside the project** (gitignored; never a sibling `../<project>-wt-<run>`), so
+this is isolated and reviewable; commit one experiment per commit. New arithmetic behind default-OFF flags, and the
+default path must reproduce a recorded result. Never move the worktree while a job runs from it.
 
 **Free but MUST NOTIFY** (do it, then tell the human — reversible in the worktree, but they want
 to know): [large, evidenced departures — e.g. abandoning the chosen backbone family for another;
@@ -198,7 +214,8 @@ then stopped exactly when one more run was most informative.)
 
 [- **Compute envelope:** the resources available (e.g. "N GPUs, cap ≤M concurrent for long runs"),
   how to check availability (`nvidia-smi` / queue) BEFORE every launch, never preempt other
-  work/projects. State it as a budget to USE (parallelize freely within it), not ration.
+  work/projects. State it as a budget to USE (parallelize freely within it), not ration. The user sets it for THIS
+  handoff, after the supervisor checked what is free (`.claude/SETUP.md` + live `sinfo` / `nvidia-smi`).
 - **Wall-clock review checkpoint (a PAUSE, not a kill):** "work productively for ~X hours, then
   STOP and report progress for human review" — a human-in-loop checkpoint, after which the agent
   may continue. This is what replaces the run budget. It pairs with the grounding ladder (which
@@ -221,6 +238,12 @@ then stopped exactly when one more run was most informative.)
 (and the fallback if online auth is unavailable — don't block on it), the run-naming scheme, and
 how the human reviews at the gate (the tracker + Live status log + notifications triad). Confirm
 auth actually works before relying on it — a stale key fails silently until a run crashes.]
+
+## Supervisor instructions
+
+<!-- Written by the supervisor / user; the worker re-reads this at every check and follows the newest entries.
+Format: `YYYY-MM-DD HH:MM UTC -- <instruction>`. The one channel for steering a running worker. A question the worker
+hits mid-run goes under Open Questions WITHOUT stopping a running job, unless the job is diverging. -->
 
 ## Live status log
 

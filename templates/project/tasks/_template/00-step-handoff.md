@@ -44,6 +44,12 @@ decisions inherited from earlier discussion, with a pointer to where they were m
 also define what "closed" means: when to stop retrying vs. declare done vs. escalate to one of
 the Plan's stop conditions instead.]
 
+## Supervisor instructions
+
+<!-- Written by the supervisor / user; the worker re-reads this at every check and follows the newest entries.
+Format: `YYYY-MM-DD HH:MM UTC -- <instruction>`. The one channel for steering a running worker. A question the worker
+hits mid-run goes under Open Questions WITHOUT stopping a running job, unless the job is diverging. -->
+
 ## Open Questions
 
 - [ ] [Question, with current lean if you have one. Stop conditions triggered during execution
@@ -65,6 +71,11 @@ should start delivering once the session is actually unattended.]
 [Concurrency/quota limits to check before consequential actions (job queue caps, concurrent-job
 limits), budget checks (current balance and where to recheck it), and any "reset stale state
 before reuse" gotchas from config/files this step will touch repeatedly.]
+
+**Compute:** [GPU type x count, GPU-hours, partition] -- set by the user for THIS handoff, after the supervisor checked
+what the machine has free (`.claude/SETUP.md` + live `sinfo` / `nvidia-smi`). More is a STOP-and-ask.
+**Workspace boundary:** everything this task creates stays inside the project directory; code changes only in a git
+worktree at `.worktrees/<run>` (branch `wt/<run>`), never in a sibling folder.
 
 ## Live status log
 

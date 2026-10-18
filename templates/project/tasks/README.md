@@ -53,6 +53,16 @@ worked example.
   replaces a separate daily-notes/progress log. Update the folder's
   `README.md` status line whenever a step's state changes, don't let it go
   stale.
+- **Handoffs to worker sessions:** one task doc per worker, a row in [`BOARD.md`](BOARD.md) (supervisor only), run
+  names claimed once and never reused. The supervisor steers a running worker only through the doc's
+  `Supervisor instructions` (re-read by the worker at every check); the worker answers through `Open Questions` and
+  its Live status log, and asks mid-run questions without stopping a running job unless it is diverging.
+- **Compute per handoff** is set by the user every time, after the supervisor has checked what is free
+  (`.claude/SETUP.md` + live `sinfo` / `nvidia-smi`), and is written into the doc as GPU type, count, GPU-hours.
+- **Code changes by workers** happen in a git worktree at `.worktrees/<run>` on branch `wt/<run>` inside the
+  project (gitignored), behind default-OFF flags; the supervisor merges. Nothing is created outside the project.
+- **Measured results** carry a reading fixed before the first number (threshold + paired count), and, where they
+  apply, a premise gate, a reproduction gate and a null control (see the training-handoff template).
 - Link back to [`.claude/research/objectives.md`](../research/objectives.md)
   for which phase maps to which project-level goal.
 

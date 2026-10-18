@@ -24,6 +24,8 @@ envs/projects.yml             the shared `projects` conda env
 shell/project-env.sh          switches env automatically on cd under ~/projects
 templates/project/            a project's .claude/ skeleton (copied, not linked)
 ├── CLAUDE.md                 project header to fill in; supervisor/worker roles and session start
+├── SETUP.md                  per-machine setup (paths, env, compute + how to check it), written by the
+│                             first supervisor session on each machine, read by every later one
 ├── settings.json             auto mode by default; no edits to secrets; ask before commit/push;
 │                             SessionStart hook running scripts/session_start.sh
 ├── scripts/session_start.sh  prints BOARD, TODO and recent CHANGELOG headings into each session
@@ -34,6 +36,20 @@ templates/project/            a project's .claude/ skeleton (copied, not linked)
                               training-handoff and post-mortem templates; BOARD.md tracks
                               work handed to worker sessions
 ```
+
+## Working conventions (every project)
+
+- **Supervisor and workers.** The interactive session plans and keeps the records; long work goes to worker
+  sessions through `handoff2auto` task docs + `tasks/BOARD.md`; a running worker is steered only through its doc's
+  `Supervisor instructions`.
+- **First session on a machine settles the setup.** No `.claude/SETUP.md`, or no section for this machine: the
+  supervisor settles paths, environment, compute, storage, accounts and notifications with the user and writes them
+  down before project work. Later sessions read it and ask only about what is missing or changed.
+- **Check compute before asking about it** (`SETUP.md`, then `sinfo` / `squeue` / `nvidia-smi`); compute is set per
+  handoff from what is actually free.
+- **Everything stays inside the project directory;** worktrees at `<project>/.worktrees/<run>` (gitignored).
+- **Measured results** carry a reading fixed before the first number, plus premise / reproduction / null-control
+  gates where they apply (training-handoff template).
 
 `init-project.sh` only adds missing files, so a project that already has `.claude/settings.json`
 or `.claude/CLAUDE.md` won't pick up the SessionStart hook or the supervisor rules: merge the

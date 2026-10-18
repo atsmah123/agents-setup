@@ -26,6 +26,10 @@ than a five-minute question now. So before drafting, work through what's still u
   good judgment") -- a vague gate gets rationalized away under momentum, a specific one doesn't.
 - **Resource guardrails.** Whatever budget/quota/concurrency limits apply -- compute budget, job
   queue concurrency caps, API rate limits, spend caps.
+  Before asking about compute, look first: the project's `.claude/SETUP.md` for this machine and the
+  live state (`sinfo` / `squeue`, or `nvidia-smi`), then offer the user what is actually free as
+  options. If `.claude/SETUP.md` has no section for this machine, settle and record the setup first
+  (global `CLAUDE.md` section 8).
 - **What's already decided vs. still open.** Pull this from the conversation, but confirm rather
   than assume -- it's easy to mistake a "probably" for a settled decision.
 - **Notifications.** Which milestones actually warrant interrupting the user (a real fork, a
@@ -47,8 +51,8 @@ on until these are actually resolved, not just asked.
 
 Read `$AGENTS_SETUP/templates/project/tasks/_template/00-step-handoff.md` directly -- it defines
 the section structure to fill in (Status/Depends-on/Blocks/Handed-off header, then Goal,
-Reference, Plan, Acceptance check, Open Questions, Notification policy, Resource guardrails, Live
-status log, Final report).
+Reference, Plan, Acceptance check, Supervisor instructions, Open Questions, Notification policy,
+Resource guardrails, Live status log, Final report).
 
 **For a large model-training/eval handoff** -- anything where the agent will launch GPU/compute
 runs, iterate on an architecture or hyperparameters, and judge success from *metrics* rather than
@@ -101,6 +105,28 @@ Fill in every section using what step 1 surfaced. A few things worth getting rig
 - **Notification policy**: note that some notification tools silently no-op if the harness judges
   the session "actively being watched" by its user -- expected behavior, not a failure, worth the
   handoff agent knowing so it doesn't mistake a quiet notification for a broken one.
+- **Supervisor instructions** starts empty under a format line; the supervisor (or user) appends
+  dated instructions there later, and the worker re-reads it at every check. It is the one channel
+  for steering a running worker -- don't steer through anything else.
+- **Fixed reading**: for any measured result, write in the Plan what counts as "helps / hurts /
+  tie" (threshold + paired count) and tell the worker to copy it into the experiment's README
+  BEFORE the first number exists. A reading chosen after seeing the result is not a reading.
+- **Gates that make a result trustworthy** (training / eval handoffs), each a hard STOP if it fails:
+  a *premise gate* (a cheap check that the change can matter, run before the expensive stage); a
+  *reproduction gate* (copied scripts / a retrained control must reproduce a recorded number before
+  any new arm is read); a *null control* whenever results are split post hoc by the control's own
+  error (hard vs easy cases, high- vs low-error regions) -- such splits manufacture "helps the hard
+  cases, hurts the easy ones" from regression to the mean, so read them against an arm that carries
+  no information.
+- **Mid-run ambiguity** (e.g. which checkpoint to score after a late instability): tell the worker
+  to ask under Open Questions *without stopping the job*, unless the job is diverging.
+- **Workspace boundary**: everything the worker creates lives inside the project directory. Code
+  changes go in a git worktree at `<project>/.worktrees/<run>` on branch `wt/<run>` (gitignored),
+  never in a sibling folder like `../<project>-wt-<run>`. A worktree is never moved while a job runs
+  from it (container binds use its absolute path); the supervisor moves / merges it after the
+  Final report. State this in Resource guardrails and in the handoff message.
+- **Compute** is set by the user for THIS handoff (ask every time; no standing cap) and goes in the
+  guardrails as GPU type, count and GPU-hours; disk headroom too when storage is tight.
 
 ### 4. Write the handoff message
 
@@ -114,8 +140,10 @@ though it should point at the task doc as the full reference. Include:
 4. The autonomy boundary, stated again inline -- don't rely on "see the task doc" alone; it's the
    single most important constraint and deserves saying twice.
 5. A notification reminder.
-6. Explicit exclusions -- what not to touch.
-7. A closing instruction to work autonomously and only check in at the gates specified.
+6. Explicit exclusions -- what not to touch -- and the workspace boundary (nothing outside the
+   project directory; worktrees at `.worktrees/<run>`).
+7. A closing instruction to work autonomously, re-read "Supervisor instructions" at every check,
+   and only check in at the gates specified.
 
 If the project has a `.claude/tasks/BOARD.md`, add a row for this task (or update its existing
 row): the task, the task doc's path, status `handed off`, today's date.

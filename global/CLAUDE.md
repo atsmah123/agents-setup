@@ -99,4 +99,21 @@ shared env for one project's sake; that project needs its own environment.
 
 ---
 
+## 8. Machines, compute and the workspace
+
+- **Check compute before asking about it.** On any machine, before asking the user a question that depends on
+  compute (which GPU, how many, how long), look first: the project's `.claude/SETUP.md` for this machine, then the
+  live state (Slurm: `sinfo` / `squeue` for partitions, GPU types, what is idle; a workstation: `nvidia-smi`). Ask with
+  what is actually free in hand, as options the user can pick from.
+- **First supervisor session in a directory or on a machine settles the setup.** If `.claude/SETUP.md` is missing, or
+  has no section for the current machine, this is that first session: before project work, settle with the user the
+  paths, environment / container, compute inventory and policy, storage, accounts and notifications, and write them
+  into `.claude/SETUP.md` (template in agents-setup `templates/project/SETUP.md`). Every later session reads it and
+  asks only about what is missing or changed.
+- **Keep work inside the project directory.** Nothing a session creates goes beside it. Git worktrees go at
+  `<project>/.worktrees/<run>` on branch `wt/<run>` (with `.worktrees/` in `.gitignore`), never `../<project>-wt-<run>`.
+  Never move a worktree while a job runs from it; move or merge it once the job is done (`git worktree move`).
+
+---
+
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.
