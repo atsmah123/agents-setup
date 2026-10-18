@@ -2,7 +2,7 @@
 # Install agents-setup on this machine. Safe to re-run.
 #   - global/CLAUDE.md -> ~/.claude/CLAUDE.md and every skill dir -> ~/.claude/skills/<name> (symlinks)
 #   - asks once where your projects live (default ~/projects) and remembers it
-#   - restores the private project files from the project-files branch, if this clone has one
+#   - restores your private project files, if you keep them in a private repo (--private URL, see private.sh)
 #   - lists the projects it finds there and sets up the ones you pick: init-project.sh adds missing .claude/ files
 #     (never overwrites), and each is recorded in ~/.config/agents-setup/projects -- machine-local, never in this repo
 #   - AGENTS_SETUP exported at the top of ~/.bashrc / ~/.zshrc (skills read templates/ through it)
@@ -11,20 +11,21 @@
 # listed with a diff command, so you can merge by hand. Only links that point into this repo are refreshed.
 # --replace moves an existing destination aside to <name>.bak.<timestamp> and links instead (the old behaviour).
 #
-# Usage: ./setup.sh [--projects-dir DIR] [--project DIR]... [--replace] [--no-ask]
+# Usage: ./setup.sh [--projects-dir DIR] [--project DIR]... [--private GIT_URL] [--replace] [--no-ask]
 set -euo pipefail
 
 AGENTS_SETUP="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
 CONFIG="${XDG_CONFIG_HOME:-$HOME/.config}/agents-setup"
 REGISTRY="$CONFIG/projects"
-replace=0 ask=1 projects=() projects_dir=""
+replace=0 ask=1 projects=() projects_dir="" private_repo=""
 while [ $# -gt 0 ]; do
   case $1 in
     --replace) replace=1 ;;
     --no-ask) ask=0 ;;
     --project) shift; projects+=("$1") ;;
     --projects-dir) shift; projects_dir="$1" ;;
+    --private) shift; private_repo="$1" ;;
     -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) echo "unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -108,16 +109,11 @@ for root in "${roots[@]}"; do
              -o -type l -lname "$AGENTS_SETUP/workspaces/*" -print 2>/dev/null)
 done
 
-# Private project files (the project-files branch, see README). Restored BEFORE the template below, because both
-# only add missing files: whichever lands first is kept, and the real files must win over blank templates.
-wt="$AGENTS_SETUP/.worktrees/project-files"
-if [ -n "$projects_dir" ] && git -C "$AGENTS_SETUP" rev-parse -q --verify origin/project-files >/dev/null; then
-  if [ -d "$wt" ]; then
-    git -C "$wt" pull -q --ff-only 2>/dev/null || echo "could not update the project-files branch; restoring what is here"
-  else
-    git -C "$AGENTS_SETUP" worktree add -q "$wt" project-files
-  fi
-  "$wt/sync.sh" restore
+# Private project files (optional, see private.sh). Restored BEFORE the template below, because both only add
+# missing files: whichever lands first is kept, and the real files must win over blank templates.
+[ -n "$private_repo" ] && echo "$private_repo" > "$CONFIG/private-repo"
+if [ -n "$projects_dir" ] && [ -s "$CONFIG/private-repo" ]; then
+  "$AGENTS_SETUP/private.sh" restore || echo "private files not restored (see the error above); setup goes on without them"
 fi
 
 # Projects: directories that get a project .claude/ skeleton and are switched into by shell/project-env.sh.
