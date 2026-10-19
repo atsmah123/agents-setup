@@ -104,7 +104,8 @@ shell/project-env.sh          switches Python env as you cd (installed into your
   alone and setup prints a `diff` command so you can merge by hand; `--replace` moves yours aside to
   `<name>.bak.<timestamp>` instead.
 - **Copies** the project template into each project's `.claude/`, adding only missing files. A project that keeps its
-  CLAUDE.md at the root gets no second one in `.claude/`, since Claude Code would load both.
+  CLAUDE.md at the root gets no second one in `.claude/`, since Claude Code would load both. A project that already
+  has its own `.claude/settings.json` keeps it, with only the startup hook added (needs `python3`).
 - **Remembers your answers** in `~/.config/agents-setup/`: `projects-dir` (the projects folder), `projects` (one
   project per line) and `private-repo`. Nothing about your machine goes into this repo.
 - **Adds a short marked block** at the top of `~/.bashrc` / `~/.zshrc` that sets `AGENTS_SETUP` and turns on the
