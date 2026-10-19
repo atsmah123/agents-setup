@@ -35,6 +35,9 @@ done < "$dir/paths"
 if [ "$1" = restore ]; then
   for p in "${paths[@]}"; do
     [ -e "$dir/$p" ] || continue
+    # only into projects this machine has: the folder above the path's .claude/ (or above the file)
+    q=${p%/}; proj=${q%%/.claude*}; [ "$proj" = "$q" ] && proj=$(dirname "$q")
+    [ -d "$projects/$proj" ] || { echo "skipped $p (no $proj here)"; continue; }
     rsync -a --relative --ignore-existing --out-format='restored %n' "${excl[@]}" "$dir/./$p" "$projects/" \
       | { grep -v '/$' || true; }                         # list files put back, not folders
   done
