@@ -138,15 +138,27 @@ if [ -n "$projects_dir" ]; then
     echo "${#new[@]} project(s) in $projects_dir not set up yet; run ./setup.sh in a terminal to pick them"
   fi
 fi
+done_now=()
 for p in "${projects[@]}"; do
   [ -n "$p" ] || continue
   p="${p/#\~/$HOME}"
+  # a name like FLOWM-DRL or ws/repo works from any directory: tried here first, then in the projects folder
+  [ ! -d "$p" ] && [ -n "$projects_dir" ] && [ -d "$projects_dir/$p" ] && p="$projects_dir/$p"
   if [ ! -d "$p" ]; then echo "skipped project $p: no such directory"; continue; fi
   p="$(cd "$p" && pwd)"
   "$AGENTS_SETUP/init-project.sh" "$p" | sed "s|^|  $p: |"
   grep -qxF "$p" "$REGISTRY" || echo "$p" >> "$REGISTRY"
+  done_now+=("$p")
   echo "project $p"
 done
+
+# Every run makes sure each project set up earlier still has its startup hook (wired in settings.json, script
+# present and runnable). Only the hook: other template files a project deleted on purpose stay deleted.
+while read -r p; do
+  [ -d "$p" ] || continue
+  case " ${done_now[*]} " in *" $p "*) continue ;; esac
+  "$AGENTS_SETUP/init-project.sh" --hook-only "$p" | sed "s|^|  $p: |"
+done < "$REGISTRY"
 
 start='# >>> agents-setup >>>'
 end='# <<< agents-setup <<<'

@@ -16,19 +16,50 @@ every Claude Code session, in every project, works the same way:
 You need Claude Code, `git`, `bash` and `rsync`.
 
 1. **Put your projects in one folder,** e.g. `~/projects/`.
-2. **Clone this repo and run setup:**
+2. **Clone this repo into your home directory and run setup:**
    ```bash
    git clone https://github.com/atsmah123/agents-setup.git ~/agents-setup
    ~/agents-setup/setup.sh
    ```
    It asks two questions:
-   - **Where do your projects live?** Press Enter for `~/projects`.
+   - **Where do your projects live?** Press Enter for `~/projects`, or type the folder.
    - **Set them all up?** It lists the projects it found: each folder, plus the repos inside a folder that isn't a
      repo itself (e.g. `my-workspace/website`). Press Enter for all of them, or `n` to pick.
+
+   Lots of other folders in there, like data on a cluster's scratch disk? Skip the questions and name your projects
+   (a name is looked up in the projects folder; a subfolder works too):
+   ```bash
+   ~/agents-setup/setup.sh --no-ask --projects-dir /path/to/projects --project my-repo --project my-workspace/website
+   ```
 3. **Open a new terminal and start Claude Code in one of your projects.** The first session will introduce itself
    as the first one on this machine and ask its setup questions.
 
 Setup never overwrites a file you already have, so it is safe to run again at any time.
+
+**If setup says `kept ~/.claude/CLAUDE.md (yours; not replaced)`,** you already had your own file there, and it
+won't get updates from this repo. Run the `diff` command setup prints: lines starting with `<` exist only in yours.
+To switch to this repo's version, run `~/agents-setup/setup.sh --replace`; your file is moved aside to
+`<name>.bak.<timestamp>`, not deleted.
+
+Keep the clone somewhere permanent, like your home directory. Every session reads the guidelines from it, so it must
+not sit on storage that gets cleaned out (e.g. a cluster's scratch space).
+
+## The startup hook
+
+Each project gets a hook that runs `.claude/scripts/session_start.sh` when a Claude session starts, so Claude sees the
+project's setup for this machine, its task board, TODO and recent changes before your first message. Setup puts it in
+place on its own, whichever command you used:
+
+- **A project without `.claude/settings.json`** gets the template's, which has the hook.
+- **A project with its own `settings.json`** keeps it; only the hook is added. Your permissions and any hooks you
+  already have stay as they are.
+- **Every later run of `./setup.sh`** checks the hook in each project it set up before, and repairs it if it was
+  removed or the script lost permission to run. No other template files are added back, so anything you deleted stays
+  deleted.
+
+Two cases it leaves to you, with a message: a `settings.json` that isn't plain JSON (for example, has comments), and a
+machine without `python3`. In both, copy the `hooks` block from `templates/project/settings.json` by hand. To check a
+project: `grep -q session_start <project>/.claude/settings.json && echo wired`.
 
 ## Everyday use
 
@@ -37,8 +68,9 @@ Run these from the `agents-setup` folder.
 | To | Do |
 |---|---|
 | Add a project | put it in your projects folder and run `./setup.sh`; it offers the new one |
-| Add a project kept somewhere else | `./setup.sh --project <dir>` |
+| Add a project by name, without the questions | `./setup.sh --no-ask --project <name or path>` |
 | Get the latest version | `git pull && ./setup.sh` |
+| Move this clone | `mv ~/agents-setup <new place>`, then `<new place>/setup.sh --replace` (relinks `~/.claude`) |
 | Change the shared guidelines or a skill | edit the files in `global/`; they take effect at once |
 | Add a skill | create `global/skills/<group>/<name>/SKILL.md` (its `name` field = the folder name), run `./setup.sh` |
 | Move your projects folder | `./setup.sh --projects-dir <dir>` |
@@ -105,14 +137,14 @@ shell/project-env.sh          switches Python env as you cd (installed into your
   `<name>.bak.<timestamp>` instead.
 - **Copies** the project template into each project's `.claude/`, adding only missing files. A project that keeps its
   CLAUDE.md at the root gets no second one in `.claude/`, since Claude Code would load both. A project that already
-  has its own `.claude/settings.json` keeps it, with only the startup hook added (needs `python3`).
+  has its own `.claude/settings.json` keeps it, with only the startup hook added (see [The startup hook](#the-startup-hook)).
 - **Remembers your answers** in `~/.config/agents-setup/`: `projects-dir` (the projects folder), `projects` (one
   project per line) and `private-repo`. Nothing about your machine goes into this repo.
 - **Adds a short marked block** at the top of `~/.bashrc` / `~/.zshrc` that sets `AGENTS_SETUP` and turns on the
   env switching.
 
-Projects keep their own copies of the template, so later template changes don't reach existing projects on their own.
-Copy an updated file over by hand (e.g. `templates/project/scripts/session_start.sh`), or merge it if you've changed
+Projects keep their own copies of the template, so later template changes don't reach existing projects on their own
+(only the hook is re-checked on every run). Copy an updated file over by hand (e.g. `templates/project/scripts/session_start.sh`), or merge it if you've changed
 yours. Very old versions of this repo linked files from a `workspaces/` folder; setup removes any such link left
 behind, and your private repo (if you use one) puts the file back.
 
