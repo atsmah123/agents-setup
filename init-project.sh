@@ -36,7 +36,8 @@ try:
     with open(path) as f:
         settings = json.load(f)
 except ValueError:
-    sys.exit("could not add the SessionStart hook: .claude/settings.json is not plain JSON; add it by hand")
+    print("could not add the SessionStart hook: .claude/settings.json is not plain JSON; add it by hand", flush=True)
+    sys.exit(1)
 with open(template) as f:
     hook = json.load(f)["hooks"]["SessionStart"]
 settings.setdefault("hooks", {}).setdefault("SessionStart", []).extend(hook)
