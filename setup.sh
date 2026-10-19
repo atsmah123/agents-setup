@@ -83,8 +83,8 @@ else
 fi
 
 # One-time migration: earlier versions linked per-directory files from a workspaces/ folder in this repo into
-# project directories. Any such link still present is replaced by a real copy of its content (from the file if it
-# is still here, else from this repo's git history), so nothing it held is lost and nothing points back here.
+# project directories. Such a link becomes a real copy if its file is still here; otherwise the broken link is
+# removed, so a private repo (--private) can put the file back in the restore below.
 roots=()
 while read -r p; do [ -n "$p" ] && roots+=("$p"); done < "$REGISTRY"
 [ -n "$projects_dir" ] && roots+=("$projects_dir")
@@ -92,18 +92,12 @@ for root in "${roots[@]}"; do
   [ -d "$root" ] || continue
   while read -r l; do
     rel=$(readlink "$l"); rel=${rel#"$AGENTS_SETUP"/}
-    tmp="$l.agents-setup-copy"
     if [ -f "$AGENTS_SETUP/$rel" ]; then
-      cp "$AGENTS_SETUP/$rel" "$tmp"
+      cp "$AGENTS_SETUP/$rel" "$l.agents-setup-copy" && mv "$l.agents-setup-copy" "$l"
+      echo "copied  $l (was a link into this repo)"
     else
-      gone=$(git -C "$AGENTS_SETUP" rev-list -n 1 HEAD -- "$rel" 2>/dev/null || true)
-      if [ -z "$gone" ] || ! git -C "$AGENTS_SETUP" show "$gone^:$rel" > "$tmp" 2>/dev/null; then
-        rm -f "$tmp"; echo "could not recover $l (was a link to $rel); left as is"; continue
-      fi
-      # git show writes plain text; restore the executable bit, or SessionStart hook scripts fail silently
-      [ "$(git -C "$AGENTS_SETUP" ls-tree "$gone^" -- "$rel" | cut -c1-6)" = 100755 ] && chmod +x "$tmp"
+      rm "$l"; echo "removed $l (a broken link to $rel; your private repo restores it if it keeps it)"
     fi
-    mv "$tmp" "$l"; echo "copied  $l (was a link into this repo)"
   # no depth limit: workspace links sat up to <dir>/<repo>/.claude/scripts/<file>; heavy dirs are pruned instead
   done < <(find "$root" \( -name .git -o -name node_modules -o -name .venv -o -name .worktrees \) -prune \
              -o -type l -lname "$AGENTS_SETUP/workspaces/*" -print 2>/dev/null)

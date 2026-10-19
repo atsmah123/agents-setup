@@ -112,8 +112,8 @@ shell/project-env.sh          switches Python env as you cd (installed into your
 
 Projects keep their own copies of the template, so later template changes don't reach existing projects on their own.
 Copy an updated file over by hand (e.g. `templates/project/scripts/session_start.sh`), or merge it if you've changed
-yours. Very old versions of this repo linked files from a `workspaces/` folder; setup turns any such link into a real
-copy.
+yours. Very old versions of this repo linked files from a `workspaces/` folder; setup removes any such link left
+behind, and your private repo (if you use one) puts the file back.
 
 ### Where Claude Code looks for these files
 
