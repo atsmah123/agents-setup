@@ -98,9 +98,11 @@ for root in "${roots[@]}"; do
     else
       rm "$l"; echo "removed $l (a broken link to $rel; your private repo restores it if it keeps it)"
     fi
-  # no depth limit: workspace links sat up to <dir>/<repo>/.claude/scripts/<file>; heavy dirs are pruned instead
-  done < <(find "$root" \( -name .git -o -name node_modules -o -name .venv -o -name .worktrees \) -prune \
-             -o -type l -lname "$AGENTS_SETUP/workspaces/*" -print 2>/dev/null)
+  # the links only ever sat at <dir>[/<repo>]/CLAUDE.md and inside its .claude/ (two levels): look exactly there,
+  # never walk the whole folder, which on a big data disk takes forever
+  done < <(for l in "$root"/{,*/,*/*/}{CLAUDE.md,.claude/*,.claude/*/*}; do
+             [ -L "$l" ] && case "$(readlink "$l")" in "$AGENTS_SETUP"/workspaces/*) echo "$l" ;; esac
+           done)
 done
 
 # Private project files (optional, see private.sh). Restored BEFORE the template below, because both only add
